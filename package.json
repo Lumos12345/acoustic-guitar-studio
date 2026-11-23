@@ -1,0 +1,42 @@
+{
+  "name": "guitar-studio",
+  "version": "1.0.0",
+  "description": "Acoustic Guitar Studio - 调音 · 节拍 · 乐谱 · 和弦",
+  "main": "main.js",
+  "author": "Acoustic Guitar Studio",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable && node scripts/apply-icon.js && electron-builder --prepackaged dist/win-unpacked --win portable",
+    "dist:installer": "electron-builder --win nsis && node scripts/apply-icon.js && electron-builder --prepackaged dist/win-unpacked --win nsis"
+  },
+  "build": {
+    "appId": "com.guitar.studio",
+    "productName": "Acoustic Guitar Studio",
+    "files": [
+      "index.html",
+      "styles.css",
+      "app.js",
+      "main.js",
+      "preload.js",
+      "icon.png"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "icon": "icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "AcousticGuitarStudio-${version}.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}

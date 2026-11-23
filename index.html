@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Acoustic Guitar Studio · 吉他练习台</title>
+  <link rel="icon" type="image/png" href="icon.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2.2c4.6 0 8.2 3.3 8.2 7.4 0 5.2-5.7 8-8.2 12.9C9.5 17.6 3.8 14.8 3.8 9.6c0-4.1 3.6-7.4 8.2-7.4z" />
+        <path class="logo-line" d="M8 9.2h8M7.3 12.4h9.4M9 15.6h6" />
+      </svg>
+      <div class="brand-text">
+        <h1>Acoustic Guitar Studio</h1>
+        <p>调音 · 节拍 · 乐谱 · 和弦</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="tuner">调音器</button>
+      <button class="tab" data-tab="metro">节拍器</button>
+      <button class="tab" data-tab="library">乐谱库</button>
+      <button class="tab" data-tab="chords">和弦库</button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <!-- ================= 调音器 ================= -->
+    <section class="panel active" id="panel-tuner">
+      <div class="tuner-grid">
+        <div class="card tuner-card">
+          <div class="card-head">
+            <span class="pill" id="micStatus">麦克风未开启</span>
+            <label class="field compact">
+              <span>调弦方案</span>
+              <select id="tuningSelect"></select>
+            </label>
+          </div>
+
+          <div class="note-display">
+            <div class="note-name" id="noteName">--</div>
+            <div class="freq" id="freqValue">0.0 Hz</div>
+          </div>
+
+          <div class="cents-text" id="centsText">拨响任意一根弦开始</div>
+
+          <div class="gauge">
+            <div class="gauge-labels"><span>偏低</span><span>准</span><span>偏高</span></div>
+            <div class="gauge-track">
+              <div class="gauge-zone"></div>
+              <div class="gauge-marker" id="gaugeMarker"></div>
+            </div>
+            <div class="gauge-ticks"><span>-50</span><span>-25</span><span>0</span><span>+25</span><span>+50</span></div>
+          </div>
+
+          <div class="strings" id="stringList"></div>
+
+          <div class="tuner-actions">
+            <button class="btn primary" id="micToggle">开始调音</button>
+            <button class="btn ghost" id="refToneBtn" disabled>试听空弦</button>
+          </div>
+
+          <p class="hint">点击下方琴弦可单独试听该弦标准音。调音时让指针停在中间绿色区域即可。</p>
+        </div>
+
+        <aside class="side-col">
+          <div class="card headstock-card">
+            <div class="card-head">
+              <h2>琴头调音图</h2>
+              <span class="pill muted" id="headstockStatus">待拨弦</span>
+            </div>
+            <div class="headstock-canvas" id="headstock"></div>
+            <p class="headstock-tip" id="headstockTip">拨响任意琴弦，亮起的旋钮就是要调的那根弦。</p>
+          </div>
+          <div class="card tips">
+            <h2>调音小贴士</h2>
+            <ul>
+              <li>用指腹轻拨空弦，声音干净、持续 1~2 秒。</li>
+              <li>标准调弦从低到高为 E A D G B E（6→1 弦）。</li>
+              <li>先调 6 弦和 5 弦，再依次向上，误差会更小。</li>
+              <li>指针在 ±3 音分内即视为准音，无需追求绝对 0。</li>
+            </ul>
+          </div>
+          <div class="card status-card">
+            <h2>当前状态</h2>
+            <dl class="status-list">
+              <div><dt>检测音高</dt><dd id="statPitch">--</dd></div>
+              <div><dt>匹配琴弦</dt><dd id="statString">--</dd></div>
+              <div><dt>偏差</dt><dd id="statCents">--</dd></div>
+            </dl>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= 节拍器 ================= -->
+    <section class="panel" id="panel-metro">
+      <div class="card metro-card">
+        <div class="preset-bar">
+          <span>节奏预设</span>
+          <div class="preset-list" id="metroPresets">
+            <button class="preset-btn" data-preset="pop">流行<small>4/4 · 96 · 八分</small></button>
+            <button class="preset-btn" data-preset="ballad">抒情<small>4/4 · 66 · 四分</small></button>
+            <button class="preset-btn" data-preset="rock">摇滚<small>4/4 · 132 · 八分</small></button>
+            <button class="preset-btn" data-preset="finger">指弹<small>4/4 · 84 · 十六分</small></button>
+          </div>
+        </div>
+
+        <div class="metro-display">
+          <div class="bpm-wrap">
+            <div class="bpm" id="bpmValue">96</div>
+            <div class="bpm-label">BPM</div>
+          </div>
+          <div class="beat-dots" id="beatDots"></div>
+          <div class="beat-caption" id="beatCaption">4/4 · 每拍 1 下</div>
+        </div>
+
+        <div class="bpm-row">
+          <button class="round-btn" id="bpmMinus" aria-label="减慢">−</button>
+          <input type="range" id="bpmSlider" min="40" max="240" value="96" />
+          <button class="round-btn" id="bpmPlus" aria-label="加快">+</button>
+        </div>
+
+        <div class="controls-grid">
+          <label class="field">
+            <span>拍号</span>
+            <select id="timeSig">
+              <option value="4">4/4 拍</option>
+              <option value="3">3/4 拍</option>
+              <option value="2">2/4 拍</option>
+              <option value="6">6/8 拍</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>每拍细分</span>
+            <select id="subdiv">
+              <option value="1">1 下</option>
+              <option value="2">2 下</option>
+              <option value="3">3 连音</option>
+              <option value="4">4 下</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>音色</span>
+            <select id="clickSound">
+              <option value="wood">木鱼</option>
+              <option value="click">电子咔哒</option>
+              <option value="beep">蜂鸣</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>音量 <em id="volLabel">60%</em></span>
+            <input type="range" id="metroVol" min="0" max="100" value="60" />
+          </label>
+        </div>
+
+        <label class="switch">
+          <input type="checkbox" id="accent" checked />
+          <span>重读第一拍</span>
+        </label>
+
+        <div class="metro-actions">
+          <button class="btn primary" id="metroToggle">开始练习</button>
+          <button class="btn ghost" id="tapTempo">点我打拍定速</button>
+        </div>
+
+        <p class="hint">点上方节奏预设可一键套用速度、拍号与细分 · 空格键开始/停止 · ← → 调整速度 · 打拍按钮连续点击 3 次以上即可估算 BPM</p>
+      </div>
+    </section>
+
+    <!-- ================= 乐谱库 ================= -->
+    <section class="panel" id="panel-library">
+      <div class="card">
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" accept="image/*,application/pdf" multiple hidden />
+          <svg viewBox="0 0 24 24" class="drop-icon" aria-hidden="true">
+            <path d="M12 16V4m0 0l-4 4m4-4l4 4" />
+            <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+          </svg>
+          <p class="drop-title">拖拽乐谱到这里上传</p>
+          <p class="drop-sub">或 <button class="link-btn" id="browseBtn">选择文件</button>，支持 JPG / PNG / WEBP / PDF</p>
+          <p class="hint" id="storeHint">一次选中多张图片会合并成一首曲子的图集；文件只保存在浏览器本地（IndexedDB），不会上传到任何服务器。</p>
+          <input type="file" id="pageInput" accept="image/*,application/pdf" multiple hidden />
+        </div>
+
+        <div class="lib-head">
+          <span id="libCount">0 份乐谱</span>
+          <div class="lib-tools">
+            <button class="link-btn" id="newChartBtn" hidden>自制乐谱</button>
+            <button class="link-btn" id="libRefreshBtn" hidden>刷新</button>
+            <button class="link-btn" id="storeDirBtn" hidden>更换存储位置</button>
+            <button class="link-btn" id="openLibBtn" hidden>打开文件夹</button>
+            <label class="lib-search-wrap">
+              <svg viewBox="0 0 24 24" class="lib-search-icon" aria-hidden="true">
+                <circle cx="10.5" cy="10.5" r="6.5" />
+                <path d="M20 20l-4.2-4.2" />
+              </svg>
+              <input id="searchInput" class="lib-search" type="search" placeholder="搜索曲谱名称" />
+            </label>
+          </div>
+        </div>
+
+        <div class="sheet-grid" id="sheetGrid"></div>
+        <div class="empty-state" id="libEmpty">还没有乐谱，上传一张吉他谱，或点右上角「自制乐谱」新建一份。</div>
+      </div>
+    </section>
+
+    <!-- ================= 和弦库 ================= -->
+    <section class="panel" id="panel-chords">
+      <div class="card">
+        <div class="card-head">
+          <h2 class="section-title">和弦库</h2>
+          <span class="pill muted" id="chordCount">共 0 个和弦</span>
+        </div>
+        <div class="chord-search-row">
+          <label class="lib-search-wrap">
+            <svg viewBox="0 0 24 24" class="lib-search-icon" aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <path d="M20 20l-4.2-4.2" />
+            </svg>
+            <input id="chordSearch" class="lib-search" type="search" placeholder="搜索和弦，如 Am、Fmaj7、Bb" />
+          </label>
+        </div>
+        <div class="chord-filters" id="chordCats">
+          <span class="filter-label">收藏</span>
+          <button class="chip" data-cat="fav">我的收藏 <span class="chip-badge" id="favCount">0</span></button>
+          <div class="accidental-toggle" id="accidentalToggle">
+            <button class="seg active" data-acc="sharp">升号 C#</button>
+            <button class="seg" data-acc="flat">降号 Db</button>
+          </div>
+        </div>
+        <div class="chord-filters" id="chordStyles">
+          <span class="filter-label">曲风</span>
+          <button class="chip active" data-style="all">全部</button>
+          <button class="chip" data-style="流行">流行</button>
+          <button class="chip" data-style="民谣">民谣</button>
+          <button class="chip" data-style="摇滚">摇滚</button>
+          <button class="chip" data-style="指弹">指弹</button>
+          <button class="chip" data-style="爵士">爵士</button>
+          <button class="chip" data-style="布鲁斯">布鲁斯</button>
+          <button class="chip" data-style="R&B">R&amp;B</button>
+          <button class="chip" data-style="城市民谣">城市民谣</button>
+        </div>
+        <div class="chord-index" id="chordRoots"></div>
+        <div class="chord-grid" id="chordGrid"></div>
+        <p class="hint">按根音索引，点上方按钮可切换分类；点卡片查看读音、色彩、适用曲风与常用走向；点卡片右上角 ☆ 可收藏到「我的收藏」；图中圆点内数字表示建议指法（1 食指、2 中指、3 无名指、4 小指），绿色圆圈为空弦，红色 ⊗ 为不弹，左上角「3fr」表示从第 3 品开始。</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- 乐谱查看器 -->
+  <div class="modal" id="viewer" hidden>
+    <div class="modal-inner">
+      <div class="modal-bar">
+        <span id="viewerName">乐谱</span>
+        <div class="modal-tools">
+          <div class="page-nav" id="pageNav" hidden>
+            <button class="icon-btn" id="prevPage" title="上一页">‹</button>
+            <span class="page-count" id="pageCounter">1 / 1</span>
+            <button class="icon-btn" id="nextPage" title="下一页">›</button>
+          </div>
+          <button class="icon-btn" id="zoomOut" title="缩小">−</button>
+          <button class="icon-btn" id="zoomReset" title="重置">100%</button>
+          <button class="icon-btn" id="zoomIn" title="放大">+</button>
+          <button class="icon-btn" id="openTab" title="新标签打开">↗</button>
+          <button class="icon-btn danger" id="viewerClose" title="关闭">×</button>
+        </div>
+      </div>
+      <div class="page-strip" id="pageStrip" hidden></div>
+      <div class="viewer-body" id="viewerBody"></div>
+    </div>
+  </div>
+
+  <!-- 自制乐谱编辑器 -->
+  <div class="modal chart-editor-modal" id="chartEditor" hidden>
+    <div class="chord-modal-inner chart-editor-inner">
+      <div class="modal-bar">
+        <span id="chartEditorTitle">新建自制乐谱</span>
+        <div class="modal-tools">
+          <span class="pill muted" id="chartDraftState"></span>
+          <button class="icon-btn danger" id="chartEditorClose" title="关闭">×</button>
+        </div>
+      </div>
+      <div class="chart-editor-body">
+        <!-- 一、曲头信息 -->
+        <div class="chart-meta-grid" id="chartMetaGrid">
+          <label class="chart-field">
+            <span>曲名</span>
+            <input id="chartTitleInput" class="text-input" data-meta="title" type="text" placeholder="例如：晴天" maxlength="60" />
+          </label>
+          <label class="chart-field">
+            <span>作者 / 编曲</span>
+            <input id="chartArtistInput" class="text-input" data-meta="artist" type="text" placeholder="例如：周杰伦" maxlength="60" />
+          </label>
+          <label class="chart-field">
+            <span>原调</span>
+            <select id="chartOriginalKey" class="text-input" data-meta="originalKey"></select>
+          </label>
+          <label class="chart-field">
+            <span>选调</span>
+            <select id="chartKey" class="text-input" data-meta="key"></select>
+          </label>
+          <label class="chart-field">
+            <span>变调夹 Capo</span>
+            <select id="chartCapo" class="text-input" data-meta="capo"></select>
+          </label>
+          <label class="chart-field">
+            <span>拍号</span>
+            <select id="chartTimeSig" class="text-input" data-meta="timeSig">
+              <option value="4/4">4/4</option>
+              <option value="3/4">3/4</option>
+              <option value="2/4">2/4</option>
+              <option value="6/8">6/8</option>
+            </select>
+          </label>
+          <label class="chart-field">
+            <span>速度 BPM</span>
+            <input id="chartBpm" class="text-input" data-meta="bpm" type="number" min="40" max="240" value="84" />
+          </label>
+          <label class="chart-field">
+            <span>调号</span>
+            <select id="chartKeySig" class="text-input" data-meta="keySig">
+              <option value="C">C 大调 / a 小调</option>
+              <option value="G">G 大调 / e 小调</option>
+              <option value="D">D 大调 / b 小调</option>
+              <option value="A">A 大调 / f# 小调</option>
+              <option value="E">E 大调 / c# 小调</option>
+              <option value="F">F 大调 / d 小调</option>
+              <option value="Bb">Bb 大调 / g 小调</option>
+              <option value="Eb">Eb 大调 / c 小调</option>
+            </select>
+          </label>
+          <label class="chart-field">
+            <span>特殊调弦</span>
+            <select id="chartTuning" class="text-input" data-meta="tuning">
+              <option value="standard">标准调弦 E A D G B E</option>
+              <option value="dropD">Drop D · D A D G B E</option>
+              <option value="dadgad">DADGAD · D A D G A D</option>
+              <option value="openG">Open G · D G D G B D</option>
+              <option value="openD">Open D · D A D F# A D</option>
+            </select>
+          </label>
+          <label class="chart-field">
+            <span>难度标签</span>
+            <select id="chartDifficulty" class="text-input" data-meta="difficulty">
+              <option value="入门">入门</option>
+              <option value="简单">简单</option>
+              <option value="中等">中等</option>
+              <option value="困难">困难</option>
+            </select>
+          </label>
+          <label class="chart-field chart-field-wide">
+            <span>备注</span>
+            <input id="chartNote" class="text-input" data-meta="note" type="text" placeholder="选填：演奏提示、编配说明" maxlength="140" />
+          </label>
+        </div>
+
+        <div class="chart-editor-main">
+          <div class="chart-edit-col">
+            <div class="chart-edit-toolbar">
+              <div class="seg-group" id="chartModeSwitch">
+                <button type="button" class="seg active" data-mode="chord">弹唱和弦谱</button>
+                <button type="button" class="seg" data-mode="tab">六线指弹谱</button>
+              </div>
+              <div class="chart-tool-group">
+                <button type="button" class="mini-btn" id="chartUndoBtn" title="撤销 Ctrl+Z">↶</button>
+                <button type="button" class="mini-btn" id="chartRedoBtn" title="重做 Ctrl+Y">↷</button>
+                <button type="button" class="mini-btn" id="chartAddMeasure">＋ 小节</button>
+                <button type="button" class="mini-btn" id="chartLoopBtn" title="播放时循环选区内的小节">循环选区</button>
+              </div>
+              <div class="chart-range">
+                <span>选区</span>
+                <input id="chartSelFrom" type="number" min="1" value="1" title="起始小节" />
+                <span>–</span>
+                <input id="chartSelTo" type="number" min="1" value="1" title="结束小节" />
+              </div>
+              <div class="chart-tool-group">
+                <button type="button" class="mini-btn" id="chartZoomOut" title="缩小">−</button>
+                <span class="chart-zoom-label" id="chartZoomLabel">100%</span>
+                <button type="button" class="mini-btn" id="chartZoomIn" title="放大">＋</button>
+              </div>
+            </div>
+
+            <div class="chart-tab-tools" id="chartTabTools" hidden>
+              <label>弦
+                <select id="tabString">
+                  <option value="1">1 弦</option>
+                  <option value="2">2 弦</option>
+                  <option value="3">3 弦</option>
+                  <option value="4">4 弦</option>
+                  <option value="5">5 弦</option>
+                  <option value="6">6 弦</option>
+                </select>
+              </label>
+              <label>品
+                <input id="tabFret" type="number" min="0" max="24" value="0" />
+              </label>
+              <label>时值
+                <select id="tabDur">
+                  <option value="w">全音符</option>
+                  <option value="h">二分音符</option>
+                  <option value="q" selected>四分音符</option>
+                  <option value="8">八分音符</option>
+                  <option value="16">十六分音符</option>
+                  <option value="r">休止符</option>
+                </select>
+              </label>
+              <label>技巧
+                <select id="tabTech">
+                  <option value="">无</option>
+                  <option value="h">h 击弦</option>
+                  <option value="p">p 勾弦</option>
+                  <option value="s">s 滑音</option>
+                  <option value="b">b 推弦</option>
+                  <option value="tr">tr 颤音</option>
+                  <option value="harm">泛音</option>
+                </select>
+              </label>
+              <label>力度
+                <select id="tabForce">
+                  <option value="">无</option>
+                  <option value="p">p 弱</option>
+                  <option value="f">f 强</option>
+                </select>
+              </label>
+              <label class="switch-inline"><input type="checkbox" id="tabTie" /> 连音线</label>
+              <button type="button" class="mini-btn primary" id="tabAddNote">＋ 添加音符</button>
+              <button type="button" class="mini-btn" id="tabDeleteNote">删除音符</button>
+            </div>
+
+            <div class="chart-measures" id="chartMeasures"></div>
+          </div>
+
+          <div class="chart-preview-col">
+            <div class="chart-preview-head">
+              <span>实时预览</span>
+              <div class="chart-tool-group">
+                <button type="button" class="mini-btn primary" id="chartPlayBtn">▶ 示范播放</button>
+                <button type="button" class="mini-btn" id="chartStopBtn">■ 停止</button>
+              </div>
+            </div>
+            <div class="chart-preview-scroll">
+              <div class="chart-preview" id="chartPreview"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-editor-actions">
+          <button type="button" class="btn ghost" id="chartDraftBtn">保存草稿</button>
+          <button type="button" class="btn ghost" id="chartImportBtn">导入 JSON</button>
+          <button type="button" class="btn ghost" id="chartExportBtn">导出 JSON</button>
+          <button type="button" class="btn ghost" id="chartImportImageBtn">导入图片</button>
+          <button type="button" class="btn ghost" id="chartExportImageBtn">导出图片</button>
+          <button type="button" class="btn ghost" id="chartSaveAsBtn">另存为</button>
+          <span class="chart-action-spacer"></span>
+          <button type="button" class="btn ghost" id="chartCancelBtn">取消</button>
+          <button type="button" class="btn primary" id="chartSaveBtn">保存</button>
+        </div>
+        <input type="file" id="chartImportFile" accept="application/json,.json" hidden />
+        <input type="file" id="chartImageFile" accept="image/*" multiple hidden />
+      </div>
+    </div>
+  </div>
+
+  <!-- 和弦选择器（自制乐谱用） -->
+  <div class="chord-picker-mask" id="chordPicker" hidden>
+    <div class="chord-picker-box">
+      <div class="chord-picker-head">
+        <input id="chordPickerSearch" class="text-input" type="search" placeholder="搜索和弦，如 C、Am7、F#m" />
+        <button type="button" class="icon-btn danger" id="chordPickerClose" title="关闭">×</button>
+      </div>
+      <div class="chord-picker-list" id="chordPickerList"></div>
+    </div>
+  </div>
+
+  <!-- 和弦详情 -->
+  <div class="modal" id="chordModal" hidden>
+    <div class="chord-modal-inner">
+      <div class="modal-bar">
+        <span id="chordModalName">和弦</span>
+        <div class="modal-tools">
+          <button class="icon-btn danger" id="chordModalClose" title="关闭">×</button>
+        </div>
+      </div>
+      <div class="chord-modal-body">
+        <div class="chord-modal-diagram" id="chordModalDiagram"></div>
+        <div class="chord-modal-info" id="chordModalInfo"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dialog-mask" id="inputDialog" hidden>
+    <div class="dialog-box">
+      <p class="dialog-title" id="inputDialogTitle">图集名称</p>
+      <p class="dialog-desc" id="inputDialogDesc"></p>
+      <input class="dialog-input" id="inputDialogField" type="text" />
+      <div class="dialog-actions">
+        <button id="inputDialogCancel">取消</button>
+        <button class="primary" id="inputDialogOk">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

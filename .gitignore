@@ -1,0 +1,16 @@
+# 依赖与构建产物
+node_modules/
+dist/
+
+# 图标设计候选稿（非运行所需）
+icon-candidates/
+icons/
+
+# 可执行文件
+*.exe
+
+# 系统与日志
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
